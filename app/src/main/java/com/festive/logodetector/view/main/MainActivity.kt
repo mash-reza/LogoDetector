@@ -1,13 +1,14 @@
-package com.festive.logodetector
+package com.festive.logodetector.view.main
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
-import android.icu.text.SimpleDateFormat
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -17,13 +18,14 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.festive.logodetector.view.content.ContentActivity
+import com.festive.logodetector.R
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.automl.AutoMLImageLabelerLocalModel
 import com.google.mlkit.vision.label.automl.AutoMLImageLabelerOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -31,7 +33,6 @@ class MainActivity : AppCompatActivity() {
 
     private var imageCapture: ImageCapture? = null
     val executer: ExecutorService = Executors.newSingleThreadExecutor()
-    private lateinit var outputDirectory: File
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,27 +42,26 @@ class MainActivity : AppCompatActivity() {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
+                this,
+                REQUIRED_PERMISSIONS,
+                REQUEST_CODE_PERMISSIONS
             )
         }
         captureButton.setOnClickListener { takePhoto() }
-        outputDirectory = getOutputDirectory()
     }
 
     private fun takePhoto() {
         // Get a stable reference of the modifiable image capture use case
+        progressBar.visibility = View.VISIBLE
+        captureButton.visibility = View.INVISIBLE
         val imageCapture = imageCapture ?: return
 
         // Create time-stamped output file to hold the image
-//        val photoFile = File(
-//            outputDirectory,
-//            SimpleDateFormat(FILENAME_FORMAT, Locale.US
-//            ).format(System.currentTimeMillis()) + ".jpg")
-        val appFolder = File(Environment.getExternalStorageDirectory().absolutePath+"/LogoDetector")
+        val appFolder =
+            File(Environment.getExternalStorageDirectory().absolutePath + "/LogoDetector")
         appFolder.mkdir()
-        val tempFile = File(appFolder.absolutePath,"temp.jpg")
-        tempFile.delete()
-        val photoFile = tempFile
+        val photoFile = File(appFolder.absolutePath, "temp.jpg")
+        photoFile.delete()
 
         // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
@@ -74,26 +74,22 @@ class MainActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
+                    Toast.makeText(
+                        this@MainActivity,
+                        "برنامه با مشکل مواجه شد.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    finish()
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(photoFile)
                     val msg = "Photo capture succeeded: $savedUri"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
                     initAutoML(savedUri)
                 }
             })
     }
-
-    private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
-        }
-        return if (mediaDir != null && mediaDir.exists())
-            mediaDir else filesDir
-    }
-
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -156,7 +152,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun initAutoML(uri:Uri) {
+    private fun initAutoML(uri: Uri) {
         /** Create LocalModel object, specifying the path to the model manifest file */
         val localModel = AutoMLImageLabelerLocalModel.Builder()
             .setAssetFilePath("model/manifest.json")
@@ -171,9 +167,11 @@ class MainActivity : AppCompatActivity() {
         val labeler = ImageLabeling.getClient(autoMLImageLabelerOptions)
 
         //TODO provide the bitmap to InputImage, then pass that to AutoML
-        val bitmap = BitmapFactory.decodeResource(resources, R.drawable.niroo_test_image)
+        val bitmap = BitmapFactory.decodeResource(resources,
+            R.drawable.niroo_test_image
+        )
 //        val image = InputImage.fromBitmap(bitmap, 0)
-        val image = InputImage.fromFilePath(this,uri)
+        val image = InputImage.fromFilePath(this, uri)
 
 
         /** run model on the provided image */
@@ -185,11 +183,30 @@ class MainActivity : AppCompatActivity() {
                         TAG,
                         "label found: text: ${it.text}, confidence: ${it.confidence} index: ${it.index}"
                     )
+                    if (it.text == "niroo") {
+                        if(it.confidence >= .7){
+                            //todo navigate to pdf list activity
+                            Intent(this,
+                                ContentActivity::class.java).apply{
+                                startActivity(this)
+                                finish()
+                            }
+                        }
+                        else Toast.makeText(
+                            this,
+                            "لوگو تشخیص داده نشد. لطفا وضعیت دوربین را تغییر دهید.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        progressBar.visibility = View.GONE
+                        captureButton.isEnabled = true
+                        captureButton.visibility = View.VISIBLE
+                    }
                 }
             }
             .addOnFailureListener { e ->
                 /** Task failed with an exception */
                 Toast.makeText(this, "مشکلی رخ داده است.", Toast.LENGTH_SHORT).show()
+                finish()
             }
 
     }
