@@ -3,6 +3,7 @@ package com.festive.logodetector.view.content
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -28,8 +29,19 @@ class ContentActivity : DaggerAppCompatActivity() {
 
         contentViewModel = ViewModelProvider(this, providerFactory)[ContentViewModel::class.java]
 
-        contentViewModel.currentFolderLiveData.observe(this, Observer {
-            currentDirTextView.text = it.name
+        contentViewModel.currentFolderLiveData.observe(this, Observer {file->
+            if(file.isDirectory){
+                currentDirTextView.text = file.name
+                pdfView.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+                recyclerView.bringToFront()
+            }else{
+                currentDirTextView.text = file.nameWithoutExtension
+                recyclerView.visibility = View.INVISIBLE
+                pdfView.fromFile(file).load()
+                pdfView.visibility = View.VISIBLE
+                pdfView.bringToFront()
+            }
         })
 
         contentViewModel.currentFolderContentLiveData.observe(this, Observer { files ->
@@ -53,7 +65,7 @@ class ContentActivity : DaggerAppCompatActivity() {
     }
 
     private fun readPDF(){
-        
+
     }
 
     companion object {

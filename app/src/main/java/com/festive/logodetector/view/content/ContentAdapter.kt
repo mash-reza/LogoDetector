@@ -3,9 +3,7 @@ package com.festive.logodetector.view.content
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.festive.logodetector.model.PDF
 import com.festive.logodetector.R
-import com.festive.logodetector.model.Folder
 import java.io.File
 
 class ContentAdapter(private val contents: List<File>, val listener: OnContentSelected) :
@@ -22,7 +20,10 @@ class ContentAdapter(private val contents: List<File>, val listener: OnContentSe
     override fun getItemCount(): Int = contents.size
 
     override fun onBindViewHolder(holder: ContentViewHolder, position: Int) {
-        holder.titleTextView.text = contents[position].name
+        if (contents[position].isDirectory)
+            holder.iconImageView.setImageResource(R.drawable.folder_icon)
+        else holder.iconImageView.setImageResource(R.drawable.pdf_icon)
+        holder.titleTextView.text = contents[position].nameWithoutExtension
         holder.titleTextView.setOnClickListener {
             listener.onSelect(contents[position])
         }

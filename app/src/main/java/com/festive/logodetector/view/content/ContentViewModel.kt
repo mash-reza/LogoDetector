@@ -32,13 +32,13 @@ class ContentViewModel @Inject constructor(@Inject @JvmField var context: Applic
     }
 
     fun setCurrentFolder(folder: File?) {
-        if (folder?.isDirectory!!){
+//        if (folder?.isDirectory!!){
             _currentFolderLiveData.value = folder
             _currentFolderContentLiveData.value =
                 _currentFolderLiveData.value?.listFiles()?.toList() ?: listOf()
-        }else{
+//        }else{
 
-        }
+//        }
     }
 
     private fun isDirectory(file: File): Boolean = file.isDirectory
