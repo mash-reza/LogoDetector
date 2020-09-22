@@ -2,8 +2,10 @@ package com.festive.logodetector.view.content
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -17,6 +19,9 @@ import java.io.File
 import javax.inject.Inject
 
 class ContentActivity : DaggerAppCompatActivity() {
+
+    private var shouldFinish = false
+    private val handler= Handler()
 
     @Inject
     lateinit var providerFactory: ViewModelProviderFactory
@@ -64,8 +69,16 @@ class ContentActivity : DaggerAppCompatActivity() {
         recyclerView.addItemDecoration(DividerItemDecoration(this, RecyclerView.VERTICAL))
     }
 
-    private fun readPDF(){
-
+    override fun onBackPressed() {
+        if(shouldFinish)
+            finish()
+        else{
+            shouldFinish = true
+            handler.postDelayed({
+                shouldFinish = false
+            },2000)
+            Toast.makeText(this, "برای خروج دکمه بازگشت را مجداا فشار دهید!", Toast.LENGTH_SHORT).show()
+        }
     }
 
     companion object {

@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -20,26 +21,37 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.festive.logodetector.view.content.ContentActivity
 import com.festive.logodetector.R
+import com.festive.logodetector.model.StorageFeeder
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.label.ImageLabeling
 import com.google.mlkit.vision.label.automl.AutoMLImageLabelerLocalModel
 import com.google.mlkit.vision.label.automl.AutoMLImageLabelerOptions
+import dagger.android.support.DaggerAppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.inject.Inject
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : DaggerAppCompatActivity() {
 
     private var imageCapture: ImageCapture? = null
     val executer: ExecutorService = Executors.newSingleThreadExecutor()
+
+    @Inject
+    lateinit var storageFeeder: StorageFeeder
+
+    private var shouldFinish = false
+    private val handler = Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         if (allPermissionsGranted()) {
+            storageFeeder.copyDirorfileFromAssetManager("قوانین و مقررات", "LogoDetector/قوانین و مقررات")
             startCamera()
+            captureButton.setOnClickListener { takePhoto() }
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -47,7 +59,6 @@ class MainActivity : AppCompatActivity() {
                 REQUEST_CODE_PERMISSIONS
             )
         }
-        captureButton.setOnClickListener { takePhoto() }
     }
 
     private fun takePhoto() {
@@ -140,12 +151,14 @@ class MainActivity : AppCompatActivity() {
     ) {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
+                storageFeeder.copyDirorfileFromAssetManager("قوانین و مقررات", "LogoDetector/قوانین و مقررات")
                 startCamera()
+                captureButton.setOnClickListener { takePhoto() }
             } else {
                 Toast.makeText(
                     this,
-                    "Permissions not granted by the user.",
-                    Toast.LENGTH_SHORT
+                    "کاربر دسترسی لازم به برنامه را نداده است.",
+                    Toast.LENGTH_LONG
                 ).show()
                 finish()
             }
@@ -211,6 +224,18 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    override fun onBackPressed() {
+        if(shouldFinish)
+            finish()
+        else{
+            shouldFinish = true
+            handler.postDelayed({
+                shouldFinish = false
+            },2000)
+            Toast.makeText(this, "برای خروج دکمه بازگشت را مجداا فشار دهید!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         executer.shutdown()
@@ -218,8 +243,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA,Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 }
